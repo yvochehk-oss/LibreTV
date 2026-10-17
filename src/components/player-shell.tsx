@@ -352,6 +352,23 @@ export function PlayerShell({
     });
     artRef.current = art;
 
+    // 点按视频：暂停/播放 + 始终呼出控制栏。
+    // 覆盖 ArtPlayer 移动端默认的「点按只切换控制栏显隐」：toggle 语义下点按经常像失灵，
+    // 这里点按必定暂停（或播放）并把控制栏叫出来，行为可预期。
+    // 注：ArtPlayer 内部的 click→toggle 先执行，本处理器后执行，最终控制栏一定是显示态，
+    // 同一 JS tick 内完成，无闪烁。
+    art.on('click', () => {
+      try {
+        if (art.playing) {
+          art.pause();
+        } else {
+          const r = art.play();
+          if (r && typeof r.catch === 'function') r.catch(() => {});
+        }
+      } catch { /* 忽略 */ }
+      art.controls.show = true;
+    });
+
     /**
      * 读解码后的真实分辨率。
      * 单码率 m3u8 / mp4 直链的清单里没有画质字段，服务端无论如何探测不到，
