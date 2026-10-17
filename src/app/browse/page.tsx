@@ -146,13 +146,13 @@ export default function BrowsePage() {
               key={s.key}
               onClick={() => selectSource(s.key)}
               className={cn(
-                'block w-full text-left px-3 py-2.5 rounded-md text-sm leading-6 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
+                'flex w-full min-h-11 shrink-0 items-center rounded-md px-3 py-2.5 text-left text-sm leading-6 transition-colors',
                 s.key === sourceKey
                   ? 'bg-accent/15 text-accent font-medium'
                   : 'text-content hover:bg-hover'
               )}
             >
-              {s.name}
+              <span className="block min-w-0 flex-1 truncate">{s.name}</span>
             </button>
           ))}
           {sources.length === 0 && (
@@ -171,24 +171,24 @@ export default function BrowsePage() {
             <button
               onClick={() => selectType('')}
               className={cn(
-                'block w-full text-left px-3 py-2.5 rounded-md text-sm leading-6 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
+                'flex w-full min-h-11 shrink-0 items-center rounded-md px-3 py-2.5 text-left text-sm leading-6 transition-colors',
                 typeId === '' ? 'bg-accent/15 text-accent font-medium' : 'text-content hover:bg-hover'
               )}
             >
-              全部最新
+              <span className="block min-w-0 flex-1 truncate">全部最新</span>
             </button>
             {categories.list.map((c) => (
               <button
                 key={c.type_id}
                 onClick={() => selectType(String(c.type_id))}
                 className={cn(
-                  'block w-full text-left px-3 py-2.5 rounded-md text-sm leading-6 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
+                  'flex w-full min-h-11 shrink-0 items-center rounded-md px-3 py-2.5 text-left text-sm leading-6 transition-colors',
                   typeId === String(c.type_id)
                     ? 'bg-accent/15 text-accent font-medium'
                     : 'text-content hover:bg-hover'
                 )}
               >
-                {c.type_name}
+                <span className="block min-w-0 flex-1 truncate">{c.type_name}</span>
               </button>
             ))}
           </div>
