@@ -146,7 +146,7 @@ export default function BrowsePage() {
               key={s.key}
               onClick={() => selectSource(s.key)}
               className={cn(
-                'text-left px-3 py-2 rounded-md text-sm transition-colors truncate',
+                'block w-full text-left px-3 py-2 rounded-md text-sm leading-5 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
                 s.key === sourceKey
                   ? 'bg-accent/15 text-accent font-medium'
                   : 'text-content hover:bg-hover'
@@ -171,7 +171,7 @@ export default function BrowsePage() {
             <button
               onClick={() => selectType('')}
               className={cn(
-                'text-left px-3 py-2 rounded-md text-sm transition-colors',
+                'block w-full text-left px-3 py-2 rounded-md text-sm leading-5 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
                 typeId === '' ? 'bg-accent/15 text-accent font-medium' : 'text-content hover:bg-hover'
               )}
             >
@@ -182,7 +182,7 @@ export default function BrowsePage() {
                 key={c.type_id}
                 onClick={() => selectType(String(c.type_id))}
                 className={cn(
-                  'text-left px-3 py-2 rounded-md text-sm transition-colors truncate',
+                  'block w-full text-left px-3 py-2 rounded-md text-sm leading-5 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
                   typeId === String(c.type_id)
                     ? 'bg-accent/15 text-accent font-medium'
                     : 'text-content hover:bg-hover'
