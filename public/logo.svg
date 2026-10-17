@@ -1,6 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#0f1a17"/>
-  <path d="M256 400 C256 320 240 280 180 240 C140 214 120 170 128 120 C180 128 230 160 256 220 C282 160 332 128 384 120 C392 170 372 214 332 240 C272 280 256 320 256 400 Z" fill="#22c55e"/>
-  <path d="M256 400 C256 320 264 290 300 260 C280 300 272 340 272 400 Z" fill="#16a34a" opacity="0.6"/>
-  <rect x="244" y="380" width="24" height="70" rx="12" fill="#22c55e"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">豌豆芽</title>
+  <desc id="desc">一颗绿色豌豆生长出两片新叶</desc>
+  <defs>
+    <radialGradient id="background" cx="45%" cy="22%" r="95%">
+      <stop offset="0%" stop-color="#112e23"/>
+      <stop offset="100%" stop-color="#071810"/>
+    </radialGradient>
+    <linearGradient id="leafLeft" x1="0" y1="0" x2=".95" y2="1">
+      <stop offset="0%" stop-color="#93ff70"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="leafRight" x1="0" y1="0" x2=".92" y2="1">
+      <stop offset="0%" stop-color="#a6ff7e"/>
+      <stop offset="100%" stop-color="#34d765"/>
+    </linearGradient>
+    <radialGradient id="pea" cx="36%" cy="22%" r="87%">
+      <stop offset="0%" stop-color="#b2ff7a"/>
+      <stop offset="52%" stop-color="#4de35e"/>
+      <stop offset="100%" stop-color="#149b48"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#background)"/>
+  <rect x="2" y="2" width="508" height="508" rx="110" fill="none" stroke="#2e6b49" stroke-opacity=".35" stroke-width="4"/>
+  <!-- The seed is an unmistakable round pea even at 16px favicon sizes. -->
+  <circle cx="179" cy="353" r="71" fill="url(#pea)"/>
+  <path d="M186 353 C256 340 274 292 271 226 C270 208 270 192 265 178"
+        fill="none" stroke="#176f39" stroke-width="25" stroke-linecap="round"/>
+  <path d="M187 345 C252 335 264 293 264 227 C263 209 263 196 259 179"
+        fill="none" stroke="#43e463" stroke-width="17" stroke-linecap="round"/>
+  <path d="M259 204 C201 198 158 163 144 92 C215 94 263 129 259 204Z" fill="url(#leafLeft)"/>
+  <path d="M263 210 C279 146 328 113 403 109 C394 184 349 215 263 210Z" fill="url(#leafRight)"/>
+  <path d="M170 119 C211 141 241 170 256 196" fill="none" stroke="#b5ff8c" stroke-width="7" opacity=".5" stroke-linecap="round"/>
+  <path d="M287 197 C321 163 347 146 383 131" fill="none" stroke="#dcffa6" stroke-width="6" opacity=".34" stroke-linecap="round"/>
+  <circle cx="153" cy="332" r="19" fill="#d0ffa4" opacity=".14"/>
 </svg>
