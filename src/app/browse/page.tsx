@@ -140,13 +140,13 @@ export default function BrowsePage() {
       {/* 片源选择 */}
       <section>
         <h3 className="text-sm font-medium text-muted mb-2">片源</h3>
-        <div className="flex flex-col gap-1 max-h-56 overflow-y-auto pr-1">
+        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
           {sources.map((s) => (
             <button
               key={s.key}
               onClick={() => selectSource(s.key)}
               className={cn(
-                'block w-full text-left px-3 py-2 rounded-md text-sm leading-5 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
+                'block w-full text-left px-3 py-2.5 rounded-md text-sm leading-6 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
                 s.key === sourceKey
                   ? 'bg-accent/15 text-accent font-medium'
                   : 'text-content hover:bg-hover'
@@ -167,11 +167,11 @@ export default function BrowsePage() {
         {categories.loading && <p className="text-sm text-muted px-1">加载分类中…</p>}
         {categories.error && <p className="text-sm text-danger px-1">{categories.error}</p>}
         {!categories.loading && !categories.error && (
-          <div className="flex flex-col gap-1 max-h-72 overflow-y-auto pr-1">
+          <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
             <button
               onClick={() => selectType('')}
               className={cn(
-                'block w-full text-left px-3 py-2 rounded-md text-sm leading-5 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
+                'block w-full text-left px-3 py-2.5 rounded-md text-sm leading-6 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
                 typeId === '' ? 'bg-accent/15 text-accent font-medium' : 'text-content hover:bg-hover'
               )}
             >
@@ -182,7 +182,7 @@ export default function BrowsePage() {
                 key={c.type_id}
                 onClick={() => selectType(String(c.type_id))}
                 className={cn(
-                  'block w-full text-left px-3 py-2 rounded-md text-sm leading-5 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
+                  'block w-full text-left px-3 py-2.5 rounded-md text-sm leading-6 transition-colors overflow-hidden whitespace-nowrap text-ellipsis',
                   typeId === String(c.type_id)
                     ? 'bg-accent/15 text-accent font-medium'
                     : 'text-content hover:bg-hover'
