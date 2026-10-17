@@ -307,9 +307,9 @@ export function PlayerShell({
   useEffect(() => {
     if (!containerRef.current || !propsRef.current.url) return;
     const initialUrl = propsRef.current.url;
-    // ArtPlayer 默认 3 秒才隐藏控制栏；播放器失去鼠标悬停后缩短为 0.8 秒。
+    // ArtPlayer 默认 3 秒隐藏控制栏；这里延长为 5 秒，点按呼出后有足够时间操作。
     const previousControlHideTime = Artplayer.CONTROL_HIDE_TIME;
-    Artplayer.CONTROL_HIDE_TIME = 800;
+    Artplayer.CONTROL_HIDE_TIME = 5000;
 
     // 初始化每集状态
     mediaHealthyRef.current = true;
