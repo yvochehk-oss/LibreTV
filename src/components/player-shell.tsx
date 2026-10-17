@@ -604,6 +604,32 @@ export function PlayerShell({
 
   return (
     <div className="relative w-full h-full">
+      <style>{`
+        /* 自定义布局：控制按钮置顶，进度条置底，避免点底部误触 */
+        .art-video-player .art-bottom {
+          justify-content: space-between;
+          background-image:
+            linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0.25), transparent),
+            linear-gradient(to top, #000, rgb(0 0 0 / 40%), transparent);
+          background-position: center top, center bottom;
+          background-repeat: repeat-x;
+          background-size: 100% var(--art-bottom-height), 100% var(--art-bottom-height);
+        }
+        .art-video-player .art-bottom .art-controls {
+          order: -1;
+        }
+        /* 迷你模式（控制栏隐藏）：底部细进度条只显示不响应点按，点按穿透去呼出控制栏 */
+        .art-video-player.art-mini-progress-bar .art-bottom {
+          background-image: none;
+        }
+        .art-video-player.art-mini-progress-bar .art-bottom .art-controls {
+          display: none;
+        }
+        .art-video-player.art-mini-progress-bar .art-bottom .art-progress {
+          transform: none;
+          pointer-events: none;
+        }
+      `}</style>
       <div ref={containerRef} className="w-full h-full" style={{ WebkitTouchCallout: 'none' }} />
       {showPoster && !error && (
         <div
