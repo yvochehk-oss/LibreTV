@@ -97,6 +97,9 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
           <div className="flex-1 sm:hidden" />
 
           <nav className="flex items-center gap-1 ml-auto">
+            <HeaderLink href="/browse" active={pathname === '/browse'}>
+              浏览
+            </HeaderLink>
             <HeaderLink href="/live" active={pathname === '/live'}>
               直播
             </HeaderLink>
