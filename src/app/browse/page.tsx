@@ -8,8 +8,8 @@ import { DetailModal } from '@/components/detail-modal';
 import { useAppStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import type { SearchResultItem, SourceConfig } from '@/lib/types';
-import type { BrowseCategory } from './api/browse/categories/route';
-import type { BrowseVideosResponse } from './api/browse/videos/route';
+import type { BrowseCategory } from '../api/browse/categories/route';
+import type { BrowseVideosResponse } from '../api/browse/videos/route';
 
 /** 片源分类浏览：侧边栏选源 → 分类 → 地区筛选，右侧视频网格 + 翻页 */
 
