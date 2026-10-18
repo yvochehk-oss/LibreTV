@@ -14,7 +14,7 @@ vi.mock('./client-api', () => ({
 }));
 
 import { api } from './client-api';
-import { applyEnvPresets } from './subscription-sync';
+import { applyEnvPresets, syncStaleSubscriptions } from './subscription-sync';
 import { useAppStore } from './store';
 import type { AuthStatusResponse, SourceListPayload } from './types';
 
@@ -221,5 +221,56 @@ describe('applyEnvPresets · DEFAULT_IMAGE_MODE', () => {
     await applyEnvPresets(status({ defaultImageMode: 'proxy' }));
     expect(useAppStore.getState().imageProxyMode).toBe('proxy');
     expect(useAppStore.getState().imageProxyModeTouched).toBe(false);
+  });
+});
+
+describe('手动订阅后台过期同步', () => {
+  it('24h 内不重复同步，超过 24h 后自动更新已订阅片源', async () => {
+    useAppStore.getState().addSubscription(SUB_URL);
+    useAppStore.getState().markSubscriptionSynced(SUB_URL);
+    fetchSourceList.mockResolvedValue(payload);
+    await syncStaleSubscriptions();
+    expect(fetchSourceList).not.toHaveBeenCalled();
+    useAppStore.setState({
+      subscriptions: [{ url: SUB_URL, lastSync: Date.now() - 25 * 60 * 60 * 1000 }],
+    });
+    await syncStaleSubscriptions();
+    expect(fetchSourceList).toHaveBeenCalledTimes(1);
+    expect(useAppStore.getState().customAPIs.map((x) => x.name)).toEqual(['非凡影视', '如意资源']);
+  });
+  it('订阅关闭时不自动同步', async () => {
+    useAppStore.setState({ subscriptions: [{ url: SUB_URL, enabled: false }] });
+    await syncStaleSubscriptions();
+    expect(fetchSourceList).not.toHaveBeenCalled();
+  });
+  it('同步失败保留历史源和订阅，保存错误状态', async () => {
+    useAppStore.getState().addCustomApi({ name: '历史源', url: 'https://old.example/vod' });
+    const original = useAppStore.getState().customAPIs;
+    useAppStore.setState({ subscriptions: [{ url: SUB_URL, lastSync: Date.now() - 30 * 60 * 60 * 1000 }] });
+    fetchSourceList.mockRejectedValue(new Error('远端网络故障'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await syncStaleSubscriptions();
+    expect(useAppStore.getState().customAPIs).toEqual(original);
+    expect(useAppStore.getState().subscriptions[0].lastStatus).toBe('error');
+    expect(warn).toHaveBeenCalled();
+  });
+  it('同一订阅同时触发两次后台同步也只拉取一次', async () => {
+    useAppStore.setState({ subscriptions: [{ url: SUB_URL }] });
+    fetchSourceList.mockResolvedValue(payload);
+    await Promise.all([syncStaleSubscriptions(), syncStaleSubscriptions()]);
+    expect(fetchSourceList).toHaveBeenCalledTimes(1);
+  });
+  it('订阅拉取期间被删除，不允许迟到的请求将其复活', async () => {
+    useAppStore.setState({ subscriptions: [{ url: SUB_URL }] });
+    let finish!: (value: SourceListPayload) => void;
+    fetchSourceList.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const task = syncStaleSubscriptions();
+    useAppStore.getState().removeSubscription(SUB_URL);
+    finish(payload);
+    await task;
+    expect(useAppStore.getState().subscriptions).toHaveLength(0);
+    expect(useAppStore.getState().customAPIs).toHaveLength(0);
+    expect(warn).toHaveBeenCalled();
   });
 });

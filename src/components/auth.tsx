@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, onUnauthorized, STATUS_QUERY_KEY } from '@/lib/client-api';
-import { applyEnvPresets } from '@/lib/subscription-sync';
+import { applyEnvPresets, syncStaleSubscriptions } from '@/lib/subscription-sync';
+import { useAppStore } from '@/lib/store';
 import type { AuthStatusResponse } from '@/lib/types';
 import { useToast } from './toast';
 
@@ -78,6 +79,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }),
     []
   );
+
+  // 手动订阅也自动跟随远端变化：登录后检查，打开期间每 15 分钟检查到期情况。
+  // 仅超过 24h 的订阅真正发起同步，避免浏览器长期打开时高频访问远端。
+  useEffect(() => {
+    if (!checked || !verified) return;
+    const run = () => { void syncStaleSubscriptions(); };
+    const unsubscribe = useAppStore.persist.onFinishHydration(run);
+    if (useAppStore.persist.hasHydrated()) run();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') run();
+    }, 15 * 60 * 1000);
+    return () => {
+      unsubscribe();
+      window.clearInterval(timer);
+    };
+  }, [checked, verified]);
 
   const openLogin = useCallback(() => setModalOpen(true), []);
 

@@ -23,12 +23,29 @@ export interface SubscriptionSyncResult {
   stats?: SubscriptionParseStats;
 }
 
-export async function syncSourceSubscription(rawUrl: string): Promise<SubscriptionSyncResult> {
-  // 统一归一化（trim + 去尾斜杠）：与 DEFAULT_SUBSCRIPTIONS 预置地址保持同一形态，
-  // 避免同一订阅地址因尾斜杠差异被存成两条订阅
+// 手动同步、默认订阅启动刷新、自动过期刷新可能同时触发：同一 URL 合并为一次请求。
+const pendingSubscriptionSyncs = new Map<string, Promise<SubscriptionSyncResult>>();
+
+export function syncSourceSubscription(rawUrl: string): Promise<SubscriptionSyncResult> {
   const url = normalizeSubscriptionUrl(rawUrl);
+  const pending = pendingSubscriptionSyncs.get(url);
+  if (pending) return pending;
+  const work = syncSubscriptionNow(url);
+  const tracked = work.finally(() => {
+    if (pendingSubscriptionSyncs.get(url) === tracked) pendingSubscriptionSyncs.delete(url);
+  });
+  pendingSubscriptionSyncs.set(url, tracked);
+  return tracked;
+}
+
+async function syncSubscriptionNow(url: string): Promise<SubscriptionSyncResult> {
+  // 成功获取远端数据前不得改动任何订阅记录；删除中的旧订阅也不能被迟到的响应复活。
+  const existed = useAppStore.getState().subscriptions.some((s) => s.url === url);
   try {
     const { name, sources, liveSources, stats } = await api.fetchSourceList(url);
+    if (existed && !useAppStore.getState().subscriptions.some((s) => s.url === url)) {
+      throw new Error('订阅已被删除，忽略迟到的同步结果');
+    }
     if (sources.length === 0 && liveSources.length === 0) {
       throw new Error('订阅内容为空');
     }
@@ -57,7 +74,39 @@ export async function syncSourceSubscription(rawUrl: string): Promise<Subscripti
 }
 
 /** 预置订阅超过该间隔未同步时，启动阶段静默刷新一次 */
-const ENV_SUB_RESYNC_MS = 24 * 60 * 60 * 1000;
+export const SUBSCRIPTION_RESYNC_MS = 24 * 60 * 60 * 1000;
+const ENV_SUB_RESYNC_MS = SUBSCRIPTION_RESYNC_MS;
+
+/** 已存在的手动订阅超过 24h 时，在登录后及页面保持打开期间静默同步。
+ * 订阅总开关关闭的不主动联网；同步失败保留旧数据并标记错误供设置页查看。
+ */
+let staleSyncRun: Promise<void> | undefined;
+export function syncStaleSubscriptions(): Promise<void> {
+  if (staleSyncRun) return staleSyncRun;
+  const run = (async () => {
+    const now = Date.now();
+    const due = useAppStore.getState().subscriptions.filter((sub) =>
+      sub.enabled !== false && (!sub.lastSync || now - sub.lastSync >= SUBSCRIPTION_RESYNC_MS)
+    );
+    for (const sub of due) {
+      // 运行期间用户可能删除或停用订阅，再次核对，避免后台重新导入已删除的订阅。
+      const current = useAppStore.getState().subscriptions.find((s) => s.url === sub.url);
+      if (!current || current.enabled === false ||
+          (current.lastSync && Date.now() - current.lastSync < SUBSCRIPTION_RESYNC_MS)) continue;
+      try {
+        await syncSourceSubscription(sub.url);
+      } catch (err) {
+        console.warn('[LibreTV] 订阅自动同步失败，保留上次数据：', sub.url,
+          err instanceof Error ? err.message : err);
+      }
+    }
+  })();
+  const tracked = run.finally(() => {
+    if (staleSyncRun === tracked) staleSyncRun = undefined;
+  });
+  staleSyncRun = tracked;
+  return tracked;
+}
 
 /**
  * 部署者通过 DEFAULT_SUBSCRIPTIONS 预置的订阅：启动时自动导入与静默刷新。
