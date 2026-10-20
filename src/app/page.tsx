@@ -184,10 +184,10 @@ function HomeContent() {
         <section className={cn('flex flex-col items-center', urlQuery ? 'mb-6' : 'mt-8 mb-8')}>
           {!urlQuery && (
             <header className="text-center mb-6">
-              <h1 className="text-4xl sm:text-5xl font-bold brand-gradient">豌豆芽</h1>
+              <h1 className="text-4xl sm:text-5xl font-bold brand-gradient">豌豆芽在发芽</h1>
             </header>
           )}
-          {urlQuery && <h1 className="sr-only">豌豆芽视频搜索</h1>}
+          {urlQuery && <h1 className="sr-only">豌豆芽在发芽视频搜索</h1>}
           {/* 定位容器比胶囊宽一圈：浮层按它的宽度对齐，接缝处不会与胶囊边框错位 1px */}
           <div ref={searchHistory.containerRef} className="relative w-full max-w-2xl">
             <form
