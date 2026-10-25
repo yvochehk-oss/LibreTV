@@ -8,7 +8,7 @@ vi.mock('./db', () => ({
   saveLiveProbeResults: vi.fn(async () => {}),
 }));
 
-import { isInDisabledSubscription, isSourceDisabled, keyBelongsToSubscription, SOURCE_DISABLE_LADDER, subKeyPrefix, useAppStore } from './store';
+import { isInDisabledSubscription, isSourceDisabled, keyBelongsToSubscription, migratePersistedAppState, SOURCE_DISABLE_LADDER, subKeyPrefix, useAppStore } from './store';
 import type { SourceConfig } from './types';
 
 const store = () => useAppStore.getState();
@@ -26,6 +26,41 @@ beforeEach(() => {
     liveRecent: [],
     yellowFilter: false,
     sourceUpdatesEnabled: true,
+    doubanEnabled: true,
+    recommendSource: 'tmdb',
+    recommendSourceTouched: false,
+  });
+});
+
+describe('推荐来源默认与持久化迁移', () => {
+  it('新用户默认 TMDB，且persist注册v3迁移', () => {
+    expect(useAppStore.getInitialState().recommendSource).toBe('tmdb');
+    expect(useAppStore.getInitialState().recommendSourceTouched).toBe(false);
+    const options = useAppStore.persist.getOptions();
+    expect(options.version).toBe(3);
+    expect(options.migrate).toBe(migratePersistedAppState);
+  });
+
+  it('v2自动豆瓣默认迁移成TMDB，缺失touched时同样视为未手选', () => {
+    const migrated = migratePersistedAppState({ recommendSource: 'douban', recommendSourceTouched: false }, 2);
+    expect(migrated.recommendSource).toBe('tmdb');
+    expect(migrated.recommendSourceTouched).toBe(false);
+    expect(migratePersistedAppState({ recommendSource: 'douban' }, 2).recommendSource).toBe('tmdb');
+  });
+
+  it('v2已记录主动选择的豆瓣保持不变，v3不会再次执行一次性迁移', () => {
+    expect(migratePersistedAppState({ recommendSource: 'douban', recommendSourceTouched: true }, 2).recommendSource).toBe('douban');
+    expect(migratePersistedAppState({ recommendSource: 'douban', recommendSourceTouched: false }, 3).recommendSource).toBe('douban');
+  });
+
+  it('不改变首页推荐总开关或片源最近更新开关', () => {
+    const migrated = migratePersistedAppState({
+      recommendSource: 'douban',
+      doubanEnabled: false,
+      sourceUpdatesEnabled: false,
+    }, 2);
+    expect(migrated.doubanEnabled).toBe(false);
+    expect(migrated.sourceUpdatesEnabled).toBe(false);
   });
 });
 

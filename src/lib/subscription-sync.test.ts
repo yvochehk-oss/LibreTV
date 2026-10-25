@@ -62,6 +62,10 @@ beforeEach(() => {
     liveSubscriptions: [],
     liveSelectedUrls: [],
     yellowFilter: false,
+    recommendSource: 'tmdb',
+    recommendSourceTouched: false,
+    doubanEnabled: true,
+    sourceUpdatesEnabled: true,
   });
 });
 
@@ -135,10 +139,11 @@ describe('applyEnvPresets', () => {
 });
 
 describe('applyEnvPresets · DEFAULT_RECOMMEND_SOURCE（issue #918）', () => {
-  it('未配置时不改动推荐数据源', async () => {
-    useAppStore.setState({ recommendSource: 'hot-list', recommendSourceTouched: false });
+  it('无服务端默认和TMDB凭证时，新装TMDB默认回退到免配置热榜', async () => {
+    useAppStore.setState({ recommendSource: 'tmdb', recommendSourceTouched: false });
     await applyEnvPresets(status());
     expect(useAppStore.getState().recommendSource).toBe('hot-list');
+    expect(useAppStore.getState().recommendSourceTouched).toBe(false);
   });
 
   it('对未主动选择过的用户应用部署者默认值，且不打「已选择」标记', async () => {
@@ -161,10 +166,30 @@ describe('applyEnvPresets · DEFAULT_RECOMMEND_SOURCE（issue #918）', () => {
     expect(useAppStore.getState().recommendSource).toBe('hot-list');
   });
 
-  it('存量用户：从未打过标记但偏好已不是出厂默认值的（老版本手动改过）不被覆盖', async () => {
+  it('旧touched=false无法区分的值视作自动默认，可迁移到部署默认', async () => {
     useAppStore.setState({ recommendSource: 'bangumi', recommendSourceTouched: false });
     await applyEnvPresets(status({ defaultRecommendSource: 'douban' }));
-    expect(useAppStore.getState().recommendSource).toBe('bangumi');
+    expect(useAppStore.getState().recommendSource).toBe('douban');
+    expect(useAppStore.getState().recommendSourceTouched).toBe(false);
+  });
+
+  it('服务端TMDB默认覆盖旧的自动豆瓣，已手动选回豆瓣后则保留', async () => {
+    useAppStore.setState({ recommendSource: 'douban', recommendSourceTouched: false });
+    await applyEnvPresets(status({ defaultRecommendSource: 'tmdb' }));
+    expect(useAppStore.getState().recommendSource).toBe('tmdb');
+
+    useAppStore.getState().updateSettings({ recommendSource: 'douban' });
+    await applyEnvPresets(status({ defaultRecommendSource: 'tmdb' }));
+    expect(useAppStore.getState().recommendSource).toBe('douban');
+    expect(useAppStore.getState().recommendSourceTouched).toBe(true);
+  });
+
+  it('应用默认或无key回退时不改动首页总开关和片源更新开关', async () => {
+    useAppStore.setState({ recommendSource: 'tmdb', recommendSourceTouched: false, doubanEnabled: false, sourceUpdatesEnabled: false });
+    await applyEnvPresets(status());
+    expect(useAppStore.getState().recommendSource).toBe('hot-list');
+    expect(useAppStore.getState().doubanEnabled).toBe(false);
+    expect(useAppStore.getState().sourceUpdatesEnabled).toBe(false);
   });
 
   it('重复调用幂等：应用一次后再调用不改变结果', async () => {

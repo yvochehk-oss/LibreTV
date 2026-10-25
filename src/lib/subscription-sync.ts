@@ -166,14 +166,18 @@ export async function applyEnvPresets(status: AuthStatusResponse): Promise<void>
     await syncEnvSubscriptions(status.defaultSubscriptions);
   }
   // 部署者通过 DEFAULT_RECOMMEND_SOURCE 指定的推荐数据源默认值：
-  // 仅对未主动选择过的用户生效（仍为出厂默认 hot-list 且无「已选择」标记），
-  // 已有偏好的用户——包括清缓存前做过选择的——不被覆盖，用户的选择始终优先。
+  // 对所有未主动选择过的用户生效，自动应用过的旧默认值可跟随新的部署默认。
+  // 已明确选择过的用户（recommendSourceTouched）不被覆盖，用户选择始终优先。
   // 直写 setState 而非 updateSettings：自动预置不算用户主动选择，不打「已选择」标记；
-  // 应用后当前值 ≠ hot-list，AuthProvider 的幂等重入天然跳过。
-  if (status.defaultRecommendSource) {
-    const s = useAppStore.getState();
-    if (!s.recommendSourceTouched && s.recommendSource === 'hot-list') {
-      useAppStore.setState({ recommendSource: status.defaultRecommendSource });
+  // 无部署默认且无 TMDB 凭证时，新装的 TMDB 默认回退到免配置热榜。
+  const s = useAppStore.getState();
+  if (!s.recommendSourceTouched) {
+    if (status.defaultRecommendSource) {
+      if (s.recommendSource !== status.defaultRecommendSource) {
+        useAppStore.setState({ recommendSource: status.defaultRecommendSource });
+      }
+    } else if (s.recommendSource === 'tmdb') {
+      useAppStore.setState({ recommendSource: 'hot-list' });
     }
   }
   // 部署者通过 DEFAULT_IMAGE_MODE 指定的封面图加载方式默认值（未配置时不改动）。

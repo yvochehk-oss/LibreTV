@@ -305,7 +305,7 @@ export const useAppStore = create<AppState>()(
       adFilter: true,
       doubanEnabled: true,
       sourceUpdatesEnabled: true,
-      recommendSource: 'hot-list',
+      recommendSource: 'tmdb',
       recommendSourceTouched: false,
       autoplayNext: true,
       // 直连优先：豆瓣封面有公共镜像 + 内置代理两级兜底（见 buildImageCandidates），
@@ -759,32 +759,10 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(createThrottledStorage),
       // v1：直播源新增归属字段、最近观看新增 sourceUrl。
       // v2：直播源归属改为多引用（fromSubscription 单值 → fromSubscriptions 数组）。
+      // v3：将未主动选择过的推荐源升级为 TMDB 默认；明确手选的来源保持不变。
       // 此前未声明 version 的存量数据会被视为 v0 并走 migrate 补齐。
-      version: 2,
-      migrate: (persisted, version) => {
-        const state = { ...((persisted ?? {}) as Partial<AppState>) };
-        if (!Array.isArray(state.liveRecent)) state.liveRecent = [];
-        if (!Array.isArray(state.liveSubscriptions)) state.liveSubscriptions = [];
-        if (version < 2) {
-          state.liveSubscriptions = state.liveSubscriptions.map((s) => {
-            const legacy = s as LiveSubscription & { fromSubscription?: unknown };
-            const fromSubscriptions = Array.isArray(legacy.fromSubscriptions)
-              ? legacy.fromSubscriptions
-              : typeof legacy.fromSubscription === 'string' && legacy.fromSubscription
-                ? [legacy.fromSubscription]
-                : [];
-            // 显式构造以剔除旧的单值字段，避免新旧字段并存
-            return {
-              url: legacy.url,
-              name: legacy.name,
-              epg: legacy.epg,
-              lastSync: legacy.lastSync,
-              fromSubscriptions,
-            };
-          });
-        }
-        return state as AppState;
-      },
+      version: 3,
+      migrate: migratePersistedAppState,
       // envSources 由服务端每次下发，不进 localStorage；
       // liveProbeResults 体积大且写入频繁，持久化走 IndexedDB（db.ts liveProbe 表），不进 localStorage
       partialize: (s) => ({
@@ -818,6 +796,39 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+/**
+ * Zustand persist migration. Version 3 applies the new TMDB default once to
+ * legacy stores unless a prior version already recorded an explicit choice.
+ */
+export function migratePersistedAppState(persisted: unknown, version: number): AppState {
+  const state = { ...((persisted ?? {}) as Partial<AppState>) };
+  if (!Array.isArray(state.liveRecent)) state.liveRecent = [];
+  if (!Array.isArray(state.liveSubscriptions)) state.liveSubscriptions = [];
+  if (version < 2) {
+    state.liveSubscriptions = state.liveSubscriptions.map((s) => {
+      const legacy = s as LiveSubscription & { fromSubscription?: unknown };
+      const fromSubscriptions = Array.isArray(legacy.fromSubscriptions)
+        ? legacy.fromSubscriptions
+        : typeof legacy.fromSubscription === 'string' && legacy.fromSubscription
+          ? [legacy.fromSubscription]
+          : [];
+      // 显式构造以剔除旧的单值字段，避免新旧字段并存
+      return {
+        url: legacy.url,
+        name: legacy.name,
+        epg: legacy.epg,
+        lastSync: legacy.lastSync,
+        fromSubscriptions,
+      };
+    });
+  }
+  if (version < 3 && state.recommendSourceTouched !== true) {
+    state.recommendSource = 'tmdb';
+    state.recommendSourceTouched = false;
+  }
+  return state as AppState;
+}
 
 /**
  * 从 IndexedDB 恢复测活缓存（Providers 挂载后、persist.rehydrate 之后调用）。
