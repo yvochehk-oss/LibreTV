@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { api } from '@/lib/client-api';
 import { TMDB_ERAS, TMDB_REGIONS, tmdbQueryKey, type TmdbEra, type TmdbList, type TmdbMediaType, type TmdbRegion } from '@/lib/tmdb-filters';
 import { DoubanCard } from '@/components/video-card';
 import { cn } from '@/lib/utils';
+import { observeTmdbLoadMore } from '@/lib/tmdb-auto-load';
 
 const LISTS: { id: TmdbList; label: string }[] = [
   { id: 'popular', label: '热门' },
@@ -20,6 +21,7 @@ export function TmdbSection({ onPick }: { onPick: (title: string) => void }) {
   const [region, setRegion] = useState<TmdbRegion>('all');
   const [era, setEra] = useState<TmdbEra>('all');
   const [trendNotice, setTrendNotice] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const hasFilters = region !== 'all' || era !== 'all';
   const query = useInfiniteQuery({
     queryKey: tmdbQueryKey(type, list, region, era),
@@ -30,6 +32,17 @@ export function TmdbSection({ onPick }: { onPick: (title: string) => void }) {
   });
   const pages = query.data?.pages ?? [];
   const items = [...new Map(pages.flatMap((page) => page.items).map((item) => [item.id, item])).values()];
+  const { hasNextPage, isFetching, isError, fetchNextPage } = query;
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasNextPage || isFetching || isError || typeof IntersectionObserver === 'undefined') return;
+    return observeTmdbLoadMore(
+      sentinel,
+      () => hasNextPage && !isFetching && !isError,
+      () => fetchNextPage(),
+    );
+  }, [type, list, region, era, hasNextPage, isFetching, isError, fetchNextPage]);
 
   const changeType = (next: TmdbMediaType) => setType(next);
   const changeList = (next: TmdbList) => {
@@ -127,17 +140,20 @@ export function TmdbSection({ onPick }: { onPick: (title: string) => void }) {
         </div>
       )}
 
-      {query.isFetchNextPageError && pages.length > 0 && (
-        <p role="alert" className="mt-3 text-center text-sm text-danger">继续加载失败，已保留当前内容。<button type="button" className="underline ml-1" onClick={() => void query.fetchNextPage()}>重试</button></p>
+      {query.isError && pages.length > 0 && (
+        <p role="alert" className="mt-3 text-center text-sm text-danger">
+          {query.isFetchNextPageError ? '继续加载失败，已保留当前内容。' : '推荐内容刷新失败，已保留当前内容。'}
+          <button type="button" className="underline ml-1" onClick={() => void (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch())}>重试</button>
+        </p>
       )}
+      {query.hasNextPage && <div ref={sentinelRef} aria-hidden="true" className="h-px" />}
       {query.hasNextPage && !query.isError && (
         <div className="mt-4 flex justify-center">
-          <button type="button" className="btn-ghost btn-sm" disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
-            {query.isFetchingNextPage ? '加载中…' : '继续加载'}
+          <button type="button" className="btn-ghost btn-sm" disabled={query.isFetching} onClick={() => void query.fetchNextPage()}>
+            {query.isFetching ? '加载中…' : '继续加载'}
           </button>
         </div>
       )}
-      <p className="mt-2 text-center text-[11px] text-faint">每次加载最多 60 部</p>
       <p className="mt-4 text-center text-[11px] text-faint">
         <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer" className="mb-2 inline-flex" aria-label="TMDB 官网">
           <Image src="/tmdb-logo.svg" width={110} height={15} alt="TMDB" />
