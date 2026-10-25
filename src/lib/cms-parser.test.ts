@@ -37,6 +37,12 @@ describe('parseSearchList', () => {
     expect(items[0].name).toBe('');
   });
 
+  it('保留 Apple CMS 的分类 ID 与根分类 ID', () => {
+    const [item] = parseSearchList({ list: [{ vod_id: 1, type_id: '11', type_id_1: 1 }] }, source);
+    expect(item.typeId).toBe(11);
+    expect(item.typeRootId).toBe(1);
+  });
+
   it('拒绝无效响应；list 缺失或 null 视为空结果', () => {
     expect(() => parseSearchList(null, source)).toThrow();
     expect(() => parseSearchList({ list: 'nope' }, source)).toThrow();

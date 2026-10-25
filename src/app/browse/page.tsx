@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import type { SearchResultItem } from '@/lib/types';
 import type { BrowseCategory } from '../api/browse/categories/route';
 import type { BrowseVideosResponse } from '../api/browse/videos/route';
+import { BROWSE_KINDS, getAreaOptions, getKindTypeIds, getKnownKinds, type BrowseKind } from '@/lib/browse-filters';
 
 /** 片源分类浏览：侧边栏选源 → 分类 → 地区筛选，右侧视频网格 + 翻页 */
 
@@ -36,6 +37,7 @@ export default function BrowsePage() {
   const [sourceKey, setSourceKey] = useState<string>('');
   const [categories, setCategories] = useState<CategoryState>({ loading: false, error: '', list: [] });
   const [typeId, setTypeId] = useState<string>(''); // '' = 全部最新
+  const [kind, setKind] = useState<BrowseKind | ''>('');
   const [area, setArea] = useState<string>(''); // '' = 全部地区
   const [page, setPage] = useState(1);
   const [videos, setVideos] = useState<BrowseVideosResponse | null>(null);
@@ -45,11 +47,16 @@ export default function BrowsePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<number[]>([]);
+  const [discoveredAreas, setDiscoveredAreas] = useState<string[]>([]);
+  const [hadEarlierMatches, setHadEarlierMatches] = useState(false);
 
   const selectedSource = useMemo(
     () => sources.find((s) => s.key === sourceKey),
     [sources, sourceKey]
   );
+  const knownKinds = useMemo(() => getKnownKinds(categories.list), [categories.list]);
+  const visibleCategories = useMemo(() => !kind ? categories.list : categories.list.filter((item) => getKindTypeIds(categories.list, kind).includes(item.type_id)), [categories.list, kind]);
 
   // 当前片源被删除、取消勾选或订阅停用后，自动切换到下一个已启用源。
   useEffect(() => {
@@ -61,8 +68,12 @@ export default function BrowsePage() {
   // 切换源时重置原源的分类和地区选择。
   useEffect(() => {
     setTypeId('');
+    setKind('');
     setArea('');
     setPage(1);
+    setCursorHistory([]);
+    setDiscoveredAreas([]);
+    setHadEarlierMatches(false);
     setLastUpdated(null);
   }, [selectedSource]);
 
@@ -105,6 +116,8 @@ export default function BrowsePage() {
     setVideosError('');
     const params = new URLSearchParams({ source: selectedSource.url, pg: String(page) });
     if (typeId) params.set('t', typeId);
+    if (kind) params.set('kind', kind);
+    if (area) params.set('area', area);
     fetch('/api/browse/videos?' + params.toString(), { signal })
       .then(async (r) => {
         const data = await r.json();
@@ -120,6 +133,8 @@ export default function BrowsePage() {
           })),
         };
         setVideos(fixed);
+        setDiscoveredAreas((current) => [...new Set([...current, ...(fixed.areas || [])])]);
+        if (fixed.list.length > 0) setHadEarlierMatches(true);
         setLastUpdated(Date.now());
       })
       .catch((e) => {
@@ -130,7 +145,7 @@ export default function BrowsePage() {
       .finally(() => {
         if (!signal.aborted) setVideosLoading(false);
       });
-  }, [selectedSource, typeId, page]);
+  }, [selectedSource, typeId, kind, area, page]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -146,20 +161,9 @@ export default function BrowsePage() {
     return () => window.clearInterval(timer);
   }, []);
 
-  // 地区筛选：从当前列表收集去重
-  const areas = useMemo(() => {
-    const set = new Set<string>();
-    (videos?.list || []).forEach((v) => {
-      const a = (v.area || '').trim();
-      if (a) set.add(a);
-    });
-    return [...set].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
-  }, [videos]);
-
-  const filteredList = useMemo(() => {
-    if (!area) return videos?.list || [];
-    return (videos?.list || []).filter((v) => (v.area || '').trim() === area);
-  }, [videos, area]);
+  const areas = useMemo(() => getAreaOptions([...new Set([...discoveredAreas, ...(videos?.areas || []), ...(area ? [area] : [])])].map((item) => ({ area: item }))), [videos, discoveredAreas, area]);
+  const filteredList = videos?.list || [];
+  const filteredMode = Boolean(kind || area);
 
   const selectSource = (key: string) => {
     setSourceKey(key);
@@ -168,9 +172,36 @@ export default function BrowsePage() {
 
   const selectType = (id: string) => {
     setTypeId(id);
-    setArea('');
     setPage(1);
-    setSidebarOpen(false);
+    setCursorHistory([]);
+    setHadEarlierMatches(false);
+  };
+
+  const selectKind = (value: BrowseKind | '') => {
+    setKind(value);
+    if (typeId && value && !getKindTypeIds(categories.list, value).includes(Number(typeId))) setTypeId('');
+    setPage(1);
+    setCursorHistory([]);
+    setHadEarlierMatches(false);
+  };
+
+  const selectArea = (value: string) => {
+    setArea(value === area ? '' : value);
+    setPage(1);
+    setCursorHistory([]);
+    setHadEarlierMatches(false);
+  };
+
+  const continueSearch = () => {
+    if (!videos?.nextPage) return;
+    setCursorHistory((history) => [...history, page]);
+    setPage(videos.nextPage);
+  };
+  const previousBatch = () => {
+    const previous = cursorHistory.at(-1);
+    if (previous === undefined) return;
+    setCursorHistory((history) => history.slice(0, -1));
+    setPage(previous);
   };
 
   const sidebar = (
@@ -201,7 +232,17 @@ export default function BrowsePage() {
 
       {/* 分类 */}
       <section>
-        <h3 className="text-sm font-medium text-muted mb-2">分类</h3>
+        <h3 className="text-sm font-medium text-muted mb-2">内容类型</h3>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          <button onClick={() => selectKind('')} className={cn('px-2.5 py-1 rounded-full text-xs transition-colors', !kind ? 'bg-accent text-white' : 'bg-chip text-muted hover:text-content')}>全部</button>
+          {BROWSE_KINDS.map((item) => (
+            <button key={item.id} onClick={() => selectKind(item.id)} className={cn('px-2.5 py-1 rounded-full text-xs transition-colors', kind === item.id ? 'bg-accent text-white' : 'bg-chip text-muted hover:text-content')}>{item.label}</button>
+          ))}
+        </div>
+        <h3 className="text-sm font-medium text-muted mb-2">源分类</h3>
+        {kind && !knownKinds.includes(kind) && !categories.loading && (
+          <p className="text-xs leading-5 text-muted px-1 mb-2">该源没有可识别的分类元数据；只按影片自身明确的类型名称筛选。</p>
+        )}
         {categories.loading && <p className="text-sm text-muted px-1">加载分类中…</p>}
         {categories.error && <p className="text-sm text-danger px-1">{categories.error}。可尝试「全部最新」或换源。</p>}
         {!categories.loading && !categories.error && categories.list.length === 0 && selectedSource && (
@@ -216,9 +257,9 @@ export default function BrowsePage() {
                 typeId === '' ? 'bg-accent/15 text-accent font-medium' : 'text-content hover:bg-hover'
               )}
             >
-              <span className="block min-w-0 flex-1 truncate">全部最新</span>
+              <span className="block min-w-0 flex-1 truncate">{kind ? `${BROWSE_KINDS.find((item) => item.id === kind)?.label}全部` : '全部最新'}</span>
             </button>
-            {categories.list.map((c) => (
+            {visibleCategories.map((c) => (
               <button
                 key={c.type_id}
                 onClick={() => selectType(String(c.type_id))}
@@ -242,7 +283,7 @@ export default function BrowsePage() {
           <h3 className="text-sm font-medium text-muted mb-2">地区</h3>
           <div className="flex flex-wrap gap-1.5">
             <button
-              onClick={() => setArea('')}
+              onClick={() => selectArea('')}
               className={cn(
                 'px-2.5 py-1 rounded-full text-xs transition-colors',
                 area === '' ? 'bg-accent text-white' : 'bg-chip text-muted hover:text-content'
@@ -253,7 +294,7 @@ export default function BrowsePage() {
             {areas.map((a) => (
               <button
                 key={a}
-                onClick={() => setArea(a === area ? '' : a)}
+                onClick={() => selectArea(a)}
                 className={cn(
                   'px-2.5 py-1 rounded-full text-xs transition-colors',
                   area === a ? 'bg-accent text-white' : 'bg-chip text-muted hover:text-content'
@@ -316,10 +357,13 @@ export default function BrowsePage() {
               {typeId && categories.list.find((c) => String(c.type_id) === typeId)
                 ? ` · ${categories.list.find((c) => String(c.type_id) === typeId)?.type_name}`
                 : typeId === '' ? ' · 全部最新' : ''}
+              {kind ? ` · ${BROWSE_KINDS.find((item) => item.id === kind)?.label}` : ''}
+              {area ? ` · ${area}` : ''}
             </h1>
-            {videos && videos.total > 0 && (
+            {videos && !filteredMode && videos.total > 0 && (
               <span className="text-xs text-muted shrink-0">共 {videos.total} 部</span>
             )}
+            {videos && filteredMode && <span className="text-xs text-muted shrink-0">本批匹配 {videos.list.length} 部</span>}
             {selectedSource && (
               <button
                 type="button"
@@ -333,6 +377,10 @@ export default function BrowsePage() {
               </button>
             )}
           </div>
+
+          {kind && videos?.kindMetadataMissing && (
+            <p className="mb-3 rounded-md bg-chip px-3 py-2 text-xs text-muted">该源未返回可用的类型分类数据；仅能识别影片自身明确标注的类型，其他条目保持未分类。</p>
+          )}
 
           {!selectedSource && (
             <div className="py-16 text-center text-muted text-sm">
@@ -362,7 +410,7 @@ export default function BrowsePage() {
 
           {selectedSource && !videosLoading && !videosError && filteredList.length === 0 && (
             <div className="py-16 text-center text-muted text-sm">
-              {area ? '该地区暂无影片，换个地区试试' : '暂无影片'}
+              {filteredMode && videos?.nextPage ? '当前批次没有匹配项，还可以继续查找后续片源页面。' : filteredMode && hadEarlierMatches ? '本批没有匹配项，已到列表末尾或没有可确认的后续页面。' : filteredMode ? '当前批次没有匹配项。' : '暂无影片'}
             </div>
           )}
 
@@ -378,8 +426,8 @@ export default function BrowsePage() {
                 ))}
               </div>
 
-              {/* 翻页 */}
-              {pagecount > 1 && (
+              {/* 普通分页；过滤模式通过服务端游标分批检查有限页数 */}
+              {!filteredMode && pagecount > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
                   <button
                     disabled={page <= 1}
@@ -401,6 +449,13 @@ export default function BrowsePage() {
                 </div>
               )}
             </>
+          )}
+          {selectedSource && filteredMode && !videosLoading && !videosError && videos && (
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <button disabled={cursorHistory.length === 0} onClick={previousBatch} className="px-3 py-1.5 rounded-md bg-chip text-sm disabled:opacity-40">上一批</button>
+              <span className="text-xs text-muted">{videos.nextPage ? `已检查 ${videos.scannedPages} 页，可继续查找` : '当前源没有可确认的后续页面'}</span>
+              <button disabled={!videos.nextPage} onClick={continueSearch} className="px-3 py-1.5 rounded-md bg-accent text-white text-sm disabled:opacity-40">继续查找</button>
+            </div>
           )}
         </main>
       </div>

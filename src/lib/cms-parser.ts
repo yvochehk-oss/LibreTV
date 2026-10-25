@@ -37,6 +37,8 @@ export function parseSearchList(
       name: String(vod.vod_name ?? ''),
       pic: typeof vod.vod_pic === 'string' ? vod.vod_pic : undefined,
       typeName: typeof vod.type_name === 'string' ? vod.type_name : undefined,
+      typeId: parseCmsId(vod.type_id),
+      typeRootId: parseCmsId(vod.type_id_1),
       year: typeof vod.vod_year === 'string' ? vod.vod_year : undefined,
       area: typeof vod.vod_area === 'string' ? vod.vod_area : undefined,
       remarks: typeof vod.vod_remarks === 'string' ? vod.vod_remarks : undefined,
@@ -97,6 +99,8 @@ export function parseDetail(
       cover: str(vod.vod_pic),
       desc: str(vod.vod_content),
       typeName: str(vod.type_name),
+      typeId: parseCmsId(vod.type_id),
+      typeRootId: parseCmsId(vod.type_id_1),
       year: str(vod.vod_year),
       area: str(vod.vod_area),
       director: str(vod.vod_director),
@@ -112,6 +116,11 @@ export function parseDetail(
 function str(v: unknown): string | undefined {
   const s = typeof v === 'string' ? v.trim() : '';
   return s || undefined;
+}
+
+function parseCmsId(value: unknown): number | undefined {
+  const id = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
 }
 
 /**

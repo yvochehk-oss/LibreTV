@@ -17,6 +17,10 @@ export interface SearchResultItem {
   name: string;
   pic?: string;
   typeName?: string;
+  /** Apple CMS category ID, retained to classify browse results per source. */
+  typeId?: number;
+  /** Apple CMS type_id_1 root category ID, when supplied by the source. */
+  typeRootId?: number;
   year?: string;
   area?: string;
   remarks?: string;
@@ -30,6 +34,8 @@ export interface VideoInfo {
   cover?: string;
   desc?: string;
   typeName?: string;
+  typeId?: number;
+  typeRootId?: number;
   year?: string;
   area?: string;
   director?: string;

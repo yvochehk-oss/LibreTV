@@ -184,7 +184,12 @@ function HomeContent() {
         <section className={cn('flex flex-col items-center', urlQuery ? 'mb-6' : 'mt-8 mb-8')}>
           {!urlQuery && (
             <header className="text-center mb-6">
-              <h1 className="text-4xl sm:text-5xl font-bold brand-gradient">豌豆芽在发芽</h1>
+              <h1 className="inline-flex items-center gap-2 text-4xl sm:text-5xl font-bold brand-gradient">
+                豌豆芽在发芽
+                <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-semibold tracking-normal text-accent">
+                  v2.0
+                </span>
+              </h1>
             </header>
           )}
           {urlQuery && <h1 className="sr-only">豌豆芽在发芽视频搜索</h1>}

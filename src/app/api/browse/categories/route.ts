@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
 export interface BrowseCategory {
   type_id: number;
   type_name: string;
+  type_pid?: number;
 }
 
 /**
@@ -31,8 +32,11 @@ export async function GET(req: Request) {
 
   const base = source.replace(/\/+$/, '');
   try {
-    const res = await fetchUpstream(`${base}?ac=list`, {
+    const upstream = new URL(base);
+    upstream.searchParams.set('ac', 'list');
+    const res = await fetchUpstream(upstream.toString(), {
       timeoutMs: 10000,
+      signal: req.signal,
       headers: cmsRequestHeaders(),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -41,9 +45,11 @@ export async function GET(req: Request) {
     const categories: BrowseCategory[] = raw
       .map((c) => {
         const item = c as Record<string, unknown>;
+        const type_pid = parseInt(String(item.type_pid ?? ''), 10);
         return {
           type_id: parseInt(String(item.type_id ?? ''), 10),
           type_name: String(item.type_name ?? '').trim(),
+          ...(Number.isFinite(type_pid) && type_pid > 0 ? { type_pid } : {}),
         };
       })
       .filter((c) => Number.isFinite(c.type_id) && c.type_name.length > 0);
