@@ -483,7 +483,7 @@ export function VideoCard({ item, onClick }: { item: SearchResultItem; onClick: 
 }
 
 /** 豆瓣推荐卡片（无来源徽章，点击直接搜索） */
-export function DoubanCard({ item, onClick }: { item: { title: string; cover: string; rating?: string }; onClick: () => void }) {
+export function DoubanCard({ item, onClick }: { item: { title: string; cover: string; rating?: string; year?: string }; onClick: () => void }) {
   const imageProxyMode = useAppStore((s) => s.imageProxyMode);
   const customImageProxy = useAppStore((s) => s.customImageProxy);
   const [imgFailed, setImgFailed] = useState(false);
@@ -530,6 +530,7 @@ export function DoubanCard({ item, onClick }: { item: { title: string; cover: st
         <div className="text-xs font-medium text-content truncate" title={item.title}>
           {item.title}
         </div>
+        {item.year && <div className="mt-0.5 text-[11px] text-faint">{item.year}</div>}
       </div>
     </div>
   );

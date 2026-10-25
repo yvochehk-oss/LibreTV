@@ -2,7 +2,7 @@
 
 import type { SearchResponse, SearchStreamEvent, SourceSearchOutcome, VideoDetail, DoubanResponse, BangumiCalendarResponse, AuthStatusResponse, SourceConfig, SearchResultItem, LivePlaylistResponse, LiveEpgResponse, SourceListPayload, QualityProbeItem, QualityProbeResult } from './types';
 import type { SourceUpdateCursor, SourceUpdatesResponse } from './source-updates';
-import type { TmdbList, TmdbMediaType, TmdbResponse } from './tmdb';
+import type { TmdbEra, TmdbList, TmdbMediaType, TmdbRegion, TmdbResponse } from './tmdb-filters';
 
 /**
  * 客户端 API 封装。401 时触发全局事件打开登录框，
@@ -184,8 +184,8 @@ export const api = {
   },
 
   /** TMDB browse recommendations; credentials stay on the server. */
-  tmdb: (type: TmdbMediaType, list: TmdbList, page: number, signal?: AbortSignal) => {
-    const sp = new URLSearchParams({ type, list, page: String(page) });
+  tmdb: (type: TmdbMediaType, list: TmdbList, page: number, region: TmdbRegion, era: TmdbEra, signal?: AbortSignal) => {
+    const sp = new URLSearchParams({ type, list, page: String(page), region, era });
     return request<TmdbResponse>(`/api/tmdb?${sp.toString()}`, { signal });
   },
 
