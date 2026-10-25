@@ -18,8 +18,10 @@ export interface AppSettings {
   yellowFilter: boolean;
   adFilter: boolean;
   doubanEnabled: boolean;
+  /** 首页片源最近更新面板开关；总开关仍由 doubanEnabled 控制。 */
+  sourceUpdatesEnabled: boolean;
   /** 首页推荐数据源：豆瓣热门 / Bangumi 每日放送（免 key）/ 影视热榜（60s API） */
-  recommendSource: 'douban' | 'bangumi' | 'hot-list';
+  recommendSource: 'douban' | 'bangumi' | 'hot-list' | 'tmdb';
   /** 用户是否在设置中主动选择过推荐数据源；为 false 时部署者的 DEFAULT_RECOMMEND_SOURCE 默认值可生效 */
   recommendSourceTouched: boolean;
   autoplayNext: boolean;
@@ -302,6 +304,7 @@ export const useAppStore = create<AppState>()(
       yellowFilter: true,
       adFilter: true,
       doubanEnabled: true,
+      sourceUpdatesEnabled: true,
       recommendSource: 'hot-list',
       recommendSourceTouched: false,
       autoplayNext: true,
@@ -800,6 +803,7 @@ export const useAppStore = create<AppState>()(
         yellowFilter: s.yellowFilter,
         adFilter: s.adFilter,
         doubanEnabled: s.doubanEnabled,
+        sourceUpdatesEnabled: s.sourceUpdatesEnabled,
         recommendSource: s.recommendSource,
         recommendSourceTouched: s.recommendSourceTouched,
         autoplayNext: s.autoplayNext,

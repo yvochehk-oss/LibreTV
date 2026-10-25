@@ -1,12 +1,20 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('./tmdb', () => ({ hasTmdbCredentials: vi.fn() }));
+
+import { hasTmdbCredentials } from './tmdb';
 import { getEnvRecommendSource } from './env-recommend-source';
 
 const KEY = 'DEFAULT_RECOMMEND_SOURCE';
 const original = process.env[KEY];
+const credentialsMock = vi.mocked(hasTmdbCredentials);
+
+beforeEach(() => { credentialsMock.mockReturnValue(false); });
 
 afterEach(() => {
   if (original === undefined) delete process.env[KEY];
   else process.env[KEY] = original;
+  vi.clearAllMocks();
 });
 
 describe('getEnvRecommendSource', () => {
@@ -27,6 +35,7 @@ describe('getEnvRecommendSource', () => {
       ['douban', 'douban'],
       ['BANGUMI', 'bangumi'],
       [' hot-list ', 'hot-list'],
+      ['TMDB', 'tmdb'],
     ] as const) {
       process.env[KEY] = raw;
       expect(getEnvRecommendSource()).toBe(expected);
@@ -36,5 +45,13 @@ describe('getEnvRecommendSource', () => {
   it('非法取值返回 undefined 而非抛错', () => {
     process.env[KEY] = 'maoyan';
     expect(getEnvRecommendSource()).toBeUndefined();
+  });
+
+  it('仅在没有有效显式选择时，凭证自动将 TMDB 设为默认推荐', () => {
+    delete process.env[KEY];
+    credentialsMock.mockReturnValue(true);
+    expect(getEnvRecommendSource()).toBe('tmdb');
+    process.env[KEY] = 'hot-list';
+    expect(getEnvRecommendSource()).toBe('hot-list');
   });
 });

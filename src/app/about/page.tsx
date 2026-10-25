@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Header } from '@/components/header';
 import { SiteFooter } from '@/components/site-footer';
 
@@ -33,6 +34,14 @@ export default function AboutPage() {
           <p className="text-sm text-muted leading-relaxed">
             你的搜索历史、观看进度等数据仅保存在本设备浏览器中（IndexedDB），不会上传到服务器。
             聚合搜索请求由服务端代理转发，第三方数据源不会看到你的 IP 地址。
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-base font-semibold text-content mb-2.5">TMDB</h2>
+          <Image src="/tmdb-logo.svg" width={110} height={15} alt="TMDB" className="mb-2" />
+          <p className="text-sm text-muted leading-relaxed">
+            This product uses the TMDB API but is not endorsed or certified by TMDB.
           </p>
         </section>
 

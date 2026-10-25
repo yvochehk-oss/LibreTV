@@ -25,6 +25,16 @@ beforeEach(() => {
     liveFavorites: [],
     liveRecent: [],
     yellowFilter: false,
+    sourceUpdatesEnabled: true,
+  });
+});
+
+describe('首页片源更新设置', () => {
+  it('默认开启且与首页推荐总开关独立设置', () => {
+    expect(store().sourceUpdatesEnabled).toBe(true);
+    store().updateSettings({ sourceUpdatesEnabled: false });
+    expect(store().sourceUpdatesEnabled).toBe(false);
+    expect(store().doubanEnabled).toBe(true);
   });
 });
 

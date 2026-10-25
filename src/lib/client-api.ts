@@ -1,6 +1,8 @@
 'use client';
 
 import type { SearchResponse, SearchStreamEvent, SourceSearchOutcome, VideoDetail, DoubanResponse, BangumiCalendarResponse, AuthStatusResponse, SourceConfig, SearchResultItem, LivePlaylistResponse, LiveEpgResponse, SourceListPayload, QualityProbeItem, QualityProbeResult } from './types';
+import type { SourceUpdateCursor, SourceUpdatesResponse } from './source-updates';
+import type { TmdbList, TmdbMediaType, TmdbResponse } from './tmdb';
 
 /**
  * 客户端 API 封装。401 时触发全局事件打开登录框，
@@ -180,6 +182,21 @@ export const api = {
     const sp = new URLSearchParams({ id });
     return request<DoubanResponse>(`/api/hot-list?${sp.toString()}`, { signal });
   },
+
+  /** TMDB browse recommendations; credentials stay on the server. */
+  tmdb: (type: TmdbMediaType, list: TmdbList, page: number, signal?: AbortSignal) => {
+    const sp = new URLSearchParams({ type, list, page: String(page) });
+    return request<TmdbResponse>(`/api/tmdb?${sp.toString()}`, { signal });
+  },
+
+  /** Bounded batch of newest entries from configured Apple CMS sources. */
+  sourceUpdates: (sources: SourceConfig[], cursor?: SourceUpdateCursor | null, filterAdult = true, kind: 'movie' | 'tv' | 'all' = 'all', signal?: AbortSignal) =>
+    request<SourceUpdatesResponse>('/api/source-updates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources, cursor: cursor ?? null, filterAdult, kind }),
+      signal,
+    }),
 
   /** 换源：按标题跨源搜索并取详情，附带接口耗时（测速）；支持 signal 以便关闭弹窗时中止在途请求 */
   detailSpeed: async (id: string, source: SourceConfig, signal?: AbortSignal) => {

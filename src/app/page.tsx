@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/header';
 import { RecommendSection } from '@/components/douban-section';
+import { SourceUpdatesSection } from '@/components/source-updates';
 import { DetailModal } from '@/components/detail-modal';
 import { AggregatedCard, aggregateResults } from '@/components/video-card';
 import { useAppStore, resolveSource, isInDisabledSubscription, isSourceDisabled } from '@/lib/store';
+import { getBrowsableSources } from '@/lib/browse-sources';
 import { api } from '@/lib/client-api';
 import type { SearchResultItem, SourceSearchOutcome } from '@/lib/types';
 import { SearchHistoryDropdown, useSearchHistory } from '@/components/search-history';
@@ -43,6 +45,8 @@ function HomeContent() {
   const envSources = useAppStore((s) => s.envSources);
   const selectedKeys = useAppStore((s) => s.selectedKeys);
   const yellowFilter = useAppStore((s) => s.yellowFilter);
+  const doubanEnabled = useAppStore((s) => s.doubanEnabled);
+  const sourceUpdatesEnabled = useAppStore((s) => s.sourceUpdatesEnabled);
   const sourceHealth = useAppStore((s) => s.sourceHealth);
   const subscriptions = useAppStore((s) => s.subscriptions);
   const [input, setInput] = useState(urlQuery);
@@ -77,6 +81,11 @@ function HomeContent() {
       // 所属订阅被整体停用的源同样跳过（无损：各源勾选状态保留，重新启用即恢复）
       .filter((s) => !isInDisabledSubscription({ subscriptions }, s.key));
   }, [customAPIs, envSources, selectedKeys, sourceHealth, subscriptions]);
+  const sourceUpdateSources = useMemo(
+    () => getBrowsableSources({ envSources, customAPIs, selectedKeys, subscriptions, yellowFilter })
+      .filter((source) => !isSourceDisabled({ sourceHealth }, source.key)),
+    [envSources, customAPIs, selectedKeys, subscriptions, yellowFilter, sourceHealth]
+  );
   const disabledSources = useMemo(
     () => selectedKeys.filter((key) => isSourceDisabled({ sourceHealth }, key)),
     [selectedKeys, sourceHealth]
@@ -369,14 +378,24 @@ function HomeContent() {
           </section>
         )}
 
-        {/* 首页推荐（有搜索时隐藏） */}
+        {/* 推荐源优先展示；片源更新与推荐共用首页总开关（有搜索时隐藏） */}
         {!urlQuery && (
-          <RecommendSection
-            onPick={(title) => {
-              setInput(title);
-              runSearch(title);
-            }}
-          />
+          <>
+            <RecommendSection
+              onPick={(title) => {
+                setInput(title);
+                runSearch(title);
+              }}
+            />
+            {doubanEnabled && sourceUpdatesEnabled && (
+              <SourceUpdatesSection
+                key={JSON.stringify([sourceUpdateSources, yellowFilter])}
+                sources={sourceUpdateSources}
+                filterAdult={yellowFilter}
+                onPick={setDetailItem}
+              />
+            )}
+          </>
         )}
       </main>
 

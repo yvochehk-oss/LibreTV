@@ -705,15 +705,22 @@ function HomePanel() {
         />
         <ToggleRow
           label="首页推荐"
-          description="在首页展示推荐内容"
+          description="控制首页推荐与片源最近更新两个区块的总开关"
           checked={store.doubanEnabled}
           onChange={(v) => store.updateSettings({ doubanEnabled: v })}
+        />
+        <ToggleRow
+          label="片源最近更新"
+          description="首页推荐总开关开启时，展示已勾选片源中的最新影片；关闭总开关后此区块也会隐藏"
+          checked={store.sourceUpdatesEnabled}
+          onChange={(v) => store.updateSettings({ sourceUpdatesEnabled: v })}
         />
         <SelectRow
           label="推荐数据源"
           value={store.recommendSource}
-          onChange={(v) => store.updateSettings({ recommendSource: v as 'douban' | 'bangumi' | 'hot-list' })}
+          onChange={(v) => store.updateSettings({ recommendSource: v as 'douban' | 'bangumi' | 'hot-list' | 'tmdb' })}
           options={[
+            { value: 'tmdb', label: 'TMDB', hint: '热门 / 高分 / 趋势；需配置服务端 API 凭证' },
             { value: 'douban', label: '豆瓣', hint: '热门电影与剧集' },
             { value: 'bangumi', label: 'Bangumi', hint: '每日新番放送（免 key）' },
             { value: 'hot-list', label: '影视榜单', hint: '豆瓣周榜 / 百度热播' },
