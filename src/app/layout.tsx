@@ -40,6 +40,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "(function(){try{var t=localStorage.getItem('libretv-theme')||'dark';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})()",
           }}
         />
+        {/* 城市级流量统计信标：上报到同源 /__stats（Cloudflare Worker 按访客 IP 记国家/省份/城市到 D1） */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){function s(){try{var b=JSON.stringify({p:location.pathname});if(navigator.sendBeacon){navigator.sendBeacon('/__stats',b)}else{fetch('/__stats',{method:'POST',body:b,keepalive:true}).catch(function(){})}}catch(e){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',s)}else{s()}window.addEventListener('popstate',s);var h=history.pushState;if(h&&!h.__ws){history.pushState=function(){h.apply(this,arguments);s()};history.pushState.__ws=1}})()",
+          }}
+        />
       </head>
       <body>
         <Providers>{children}</Providers>
